@@ -25,6 +25,7 @@ pai_jobs/easy_rec.tar.gz
 pai_jobs/easy_rec*.tar.gz
 
 
+
 # idea files
 .idea
 
@@ -34,3 +35,9 @@ pai_jobs/easy_rec*.tar.gz
 
 .DS_Store
 .python-version
+
+
+/** example */
+/examples/data/*/*.csv
+/examples/data/*/*_data
+/examples/ckpt/*
