@@ -104,6 +104,19 @@ def main():
                 max_samples=None
             )
             
+        elif mode == 'large':
+            print("Processing LARGE dataset with enhanced features...")
+            parse_sample_skeleton(
+                'sample_skeleton_train.csv',
+                'ali_ccp_train_large.csv',
+                max_samples=5000000
+            )
+            parse_sample_skeleton(
+                'sample_skeleton_test.csv',
+                'ali_ccp_test_large.csv', 
+                max_samples=500000
+            )
+            
         elif mode == 'medium':
             print("Processing MEDIUM dataset with enhanced features...")
             parse_sample_skeleton(
@@ -130,7 +143,7 @@ def main():
                 max_samples=10000
             )
         else:
-            print("Usage: python preprocess.py [small|medium|full]")
+            print("Usage: python preprocess.py [small|medium|large|full]")
             sys.exit(1)
     else:
         print("Processing SMALL dataset with enhanced features...")
