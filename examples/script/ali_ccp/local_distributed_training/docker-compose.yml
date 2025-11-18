@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  # Parameter Server - 负责参数存储和同步
+  ps-0:
+    image: mybigpai-public-registry.cn-beijing.cr.aliyuncs.com/easyrec/easyrec:py38-tf2.12-0.8.5
+    container_name: easyrec_ps_0
+    hostname: ps-0
+    networks:
+      - easyrec-network
+    volumes:
+      - ../../../:/workspace/EasyRec
+    working_dir: /workspace/EasyRec
+    environment:
+      - TF_CONFIG={"cluster":{"ps":["ps-0:2222"],"chief":["chief:2223"],"worker":["worker-0:2224","worker-1:2225"]},"task":{"type":"ps","index":0}}
+      - OMP_NUM_THREADS=4
+      - TF_NUM_INTRAOP_THREADS=4
+      - TF_NUM_INTEROP_THREADS=4
+    command: >
+      python -m easy_rec.python.train_eval
+      --pipeline_config_path examples/script/ali_ccp/deepfm_on_ali_ccp_ps.config
+    ports:
+      - "2222:2222"
+    cpus: 2
+    mem_limit: 4g
+
+  # Chief Worker - 主Worker，负责checkpoint保存和评估
+  chief:
+    image: mybigpai-public-registry.cn-beijing.cr.aliyuncs.com/easyrec/easyrec:py38-tf2.12-0.8.5
+    container_name: easyrec_chief
+    hostname: chief
+    networks:
+      - easyrec-network
+    volumes:
+      - ../../../:/workspace/EasyRec
+    working_dir: /workspace/EasyRec
+    environment:
+      - TF_CONFIG={"cluster":{"ps":["ps-0:2222"],"chief":["chief:2223"],"worker":["worker-0:2224","worker-1:2225"]},"task":{"type":"chief","index":0}}
+      - OMP_NUM_THREADS=8
+      - TF_NUM_INTRAOP_THREADS=8
+      - TF_NUM_INTEROP_THREADS=8
+    command: >
+      python -m easy_rec.python.train_eval
+      --pipeline_config_path examples/script/ali_ccp/deepfm_on_ali_ccp_ps.config
+    ports:
+      - "2223:2223"
+    depends_on:
+      - ps-0
+    cpus: 4
+    mem_limit: 8g
+
+  # Worker 0 - 普通Worker
+  worker-0:
+    image: mybigpai-public-registry.cn-beijing.cr.aliyuncs.com/easyrec/easyrec:py38-tf2.12-0.8.5
+    container_name: easyrec_worker_0
+    hostname: worker-0
+    networks:
+      - easyrec-network
+    volumes:
+      - ../../../:/workspace/EasyRec
+    working_dir: /workspace/EasyRec
+    environment:
+      - TF_CONFIG={"cluster":{"ps":["ps-0:2222"],"chief":["chief:2223"],"worker":["worker-0:2224","worker-1:2225"]},"task":{"type":"worker","index":0}}
+      - OMP_NUM_THREADS=8
+      - TF_NUM_INTRAOP_THREADS=8
+      - TF_NUM_INTEROP_THREADS=8
+    command: >
+      python -m easy_rec.python.train_eval
+      --pipeline_config_path examples/script/ali_ccp/deepfm_on_ali_ccp_ps.config
+    ports:
+      - "2224:2224"
+    depends_on:
+      - ps-0
+      - chief
+    cpus: 4
+    mem_limit: 8g
+
+  # Worker 1 - 普通Worker
+  worker-1:
+    image: mybigpai-public-registry.cn-beijing.cr.aliyuncs.com/easyrec/easyrec:py38-tf2.12-0.8.5
+    container_name: easyrec_worker_1
+    hostname: worker-1
+    networks:
+      - easyrec-network
+    volumes:
+      - ../../../:/workspace/EasyRec
+    working_dir: /workspace/EasyRec
+    environment:
+      - TF_CONFIG={"cluster":{"ps":["ps-0:2222"],"chief":["chief:2223"],"worker":["worker-0:2224","worker-1:2225"]},"task":{"type":"worker","index":1}}
+      - OMP_NUM_THREADS=8
+      - TF_NUM_INTRAOP_THREADS=8
+      - TF_NUM_INTEROP_THREADS=8
+    command: >
+      python -m easy_rec.python.train_eval
+      --pipeline_config_path examples/script/ali_ccp/deepfm_on_ali_ccp_ps.config
+    ports:
+      - "2225:2225"
+    depends_on:
+      - ps-0
+      - chief
+    cpus: 4
+    mem_limit: 8g
+
+  # TensorBoard - 独立的可视化服务
+  tensorboard:
+    image: mybigpai-public-registry.cn-beijing.cr.aliyuncs.com/easyrec/easyrec:py38-tf2.12-0.8.5
+    container_name: easyrec_tensorboard
+    hostname: tensorboard
+    networks:
+      - easyrec-network
+    volumes:
+      - ../../../:/workspace/EasyRec
+    working_dir: /workspace/EasyRec
+    command: >
+      tensorboard --logdir=/workspace/EasyRec/examples/ckpt --host=0.0.0.0 --port=6006
+    ports:
+      - "6006:6006"
+    cpus: 1
+    mem_limit: 2g
+    restart: unless-stopped
+
+networks:
+  easyrec-network:
+    driver: bridge

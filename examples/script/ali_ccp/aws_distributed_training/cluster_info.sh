@@ -1,0 +1,13 @@
+#!/bin/bash
+# 自动生成的集群信息
+
+export PS_INSTANCE_ID="i-03a61a132439cf90a"
+export PS_IP="172.16.112.242"
+
+export CHIEF_INSTANCE_ID="i-0201d8d0e5bc252cb"
+export CHIEF_IP="172.16.124.248"
+
+export WORKER_INSTANCE_IDS=(i-08b56c695927bad26 i-02c508c6cbeb7d166 i-08039c98df0de28da i-0cf8e6a2ebb56a2fa)
+export WORKER_IPS=(172.16.112.78 172.16.124.223 172.16.136.15 172.16.112.86)
+
+export ALL_INSTANCE_IDS="i-03a61a132439cf90a i-0201d8d0e5bc252cb i-08b56c695927bad26 i-02c508c6cbeb7d166 i-08039c98df0de28da i-0cf8e6a2ebb56a2fa"
