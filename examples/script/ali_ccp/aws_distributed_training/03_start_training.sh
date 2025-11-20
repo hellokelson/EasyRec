@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##############################################################################
-# 启动分布式训练
+# 启动分布式训练 - 自动时间戳版本
 ##############################################################################
 
 set -e
@@ -18,8 +18,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# 生成时间戳版本
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+EXPERIMENT_NAME="deepfm_ali_ccp_${DATASET_SIZE}_ps_${TIMESTAMP}"
+
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}启动分布式训练${NC}"
+echo -e "${BLUE}启动分布式训练 - ${EXPERIMENT_NAME}${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -27,9 +31,52 @@ echo ""
 SSH_KEY="${HOME}/.ssh/${KEY_NAME}.pem"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_KEY"
 
-# 配置文件路径（容器内）
-CONFIG_FILE="/workspace/configs/deepfm_on_ali_ccp_${DATASET_SIZE}_ps.config"
-HOST_CONFIG_FILE="/home/ubuntu/easyrec_data/configs/deepfm_on_ali_ccp_${DATASET_SIZE}_ps.config"
+# 检查是否有正在运行的训练
+echo -e "${YELLOW}[0/5] 检查现有训练状态...${NC}"
+
+# 检查 Chief 容器是否在运行
+CHIEF_RUNNING=$(ssh $SSH_OPTS ubuntu@$CHIEF_IP 'docker ps --filter "name=easyrec_chief" --format "{{.Names}}"' 2>/dev/null || echo "")
+
+if [ ! -z "$CHIEF_RUNNING" ]; then
+    echo -e "${RED}⚠️  检测到正在运行的训练任务!${NC}"
+    echo -e "${BLUE}当前运行的容器: $CHIEF_RUNNING${NC}"
+    echo ""
+    
+    # 获取当前实验信息（如果存在）
+    if [ -f "$SCRIPT_DIR/current_experiment.sh" ]; then
+        source "$SCRIPT_DIR/current_experiment.sh"
+        echo -e "${BLUE}当前实验: $CURRENT_EXPERIMENT${NC}"
+    fi
+    
+    echo -e "${YELLOW}选项:${NC}"
+    echo "  1) 停止当前训练并启动新实验"
+    echo "  2) 取消操作，保持当前训练"
+    echo ""
+    read -p "请选择 (1/2): " choice
+    
+    case $choice in
+        1)
+            echo -e "${YELLOW}正在停止当前训练...${NC}"
+            bash "$SCRIPT_DIR/06_stop_training.sh"
+            echo -e "${GREEN}✓ 已停止现有训练${NC}"
+            ;;
+        2)
+            echo -e "${GREEN}操作已取消，当前训练继续运行${NC}"
+            echo -e "${BLUE}监控命令: bash 04_monitor_training.sh${NC}"
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}无效选择，操作已取消${NC}"
+            exit 1
+            ;;
+    esac
+else
+    echo -e "${GREEN}✓ 没有检测到正在运行的训练${NC}"
+fi
+
+# 配置文件路径（容器内）- 使用时间戳
+CONFIG_FILE="/workspace/configs/${EXPERIMENT_NAME}.config"
+HOST_CONFIG_FILE="/home/ubuntu/easyrec_data/configs/${EXPERIMENT_NAME}.config"
 
 echo -e "${YELLOW}[1/5] 生成训练配置文件...${NC}"
 
@@ -38,7 +85,7 @@ ssh $SSH_OPTS ubuntu@$CHIEF_IP << EOFCONFIG
 cat > $HOST_CONFIG_FILE << 'CONFIGEND'
 train_input_path: "/workspace/data/ali_ccp_train_${DATASET_SIZE}.csv"
 eval_input_path: "/workspace/data/ali_ccp_test_${DATASET_SIZE}.csv"
-model_dir: "/workspace/ckpt/deepfm_ali_ccp_${DATASET_SIZE}_ps"
+model_dir: "/workspace/ckpt/${EXPERIMENT_NAME}"
 
 train_config {
   log_step_count_steps: 100
@@ -205,11 +252,25 @@ CONFIGEND
 EOFCONFIG
 
 # 复制配置到所有节点
+ALL_IPS=($PS_IP $CHIEF_IP "${WORKER_IPS[@]}")
 for ip in "${ALL_IPS[@]}"; do
-    scp $SSH_OPTS ubuntu@$CHIEF_IP:$HOST_CONFIG_FILE ubuntu@$ip:$HOST_CONFIG_FILE
+    if [ "$ip" != "$CHIEF_IP" ]; then
+        echo "  分发配置到: $ip"
+        scp $SSH_OPTS ubuntu@$CHIEF_IP:$HOST_CONFIG_FILE ubuntu@$ip:$HOST_CONFIG_FILE
+    fi
 done
 
 echo -e "${GREEN}✓ 配置文件已生成并分发${NC}"
+
+echo ""
+echo -e "${YELLOW}[1.5/5] 创建模型目录并设置权限...${NC}"
+
+# 在所有节点创建模型目录并设置权限
+for ip in "${ALL_IPS[@]}"; do
+    ssh $SSH_OPTS ubuntu@$ip "sudo mkdir -p /home/ubuntu/easyrec_data/ckpt/${EXPERIMENT_NAME} && sudo chmod 777 /home/ubuntu/easyrec_data/ckpt/${EXPERIMENT_NAME}"
+done
+
+echo -e "${GREEN}✓ 模型目录已创建${NC}"
 
 echo ""
 echo -e "${YELLOW}[2/5] 启动 PS Server...${NC}"
@@ -276,6 +337,11 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}分布式训练已启动!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
+echo -e "${BLUE}实验信息:${NC}"
+echo "  实验名称: $EXPERIMENT_NAME"
+echo "  模型目录: /workspace/ckpt/$EXPERIMENT_NAME"
+echo "  配置文件: $CONFIG_FILE"
+echo ""
 echo -e "${BLUE}集群信息:${NC}"
 echo "  PS Server:    $PS_IP"
 echo "  Chief Worker: $CHIEF_IP"
@@ -290,5 +356,9 @@ echo ""
 echo "  查看所有节点状态:"
 echo "    ${GREEN}bash 04_monitor_training.sh${NC}"
 echo ""
-echo -e "${YELLOW}提示: 训练预计需要较长时间，请耐心等待${NC}"
-echo -e "${YELLOW}下一步: bash 05_setup_local_tensorboard.sh (配置本地 TensorBoard)${NC}"
+echo -e "${YELLOW}提示: 每次运行都会创建新的实验版本${NC}"
+echo -e "${YELLOW}下一步: bash 05_setup_local_tensorboard.sh (查看所有实验的TensorBoard)${NC}"
+
+# 保存当前实验信息
+echo "export CURRENT_EXPERIMENT='$EXPERIMENT_NAME'" > "$SCRIPT_DIR/current_experiment.sh"
+echo "export CURRENT_MODEL_DIR='/workspace/ckpt/$EXPERIMENT_NAME'" >> "$SCRIPT_DIR/current_experiment.sh"

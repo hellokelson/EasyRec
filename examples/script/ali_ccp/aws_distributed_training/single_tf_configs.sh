@@ -1,0 +1,6 @@
+export PS_TF_CONFIG='{"cluster":{"ps":["localhost:2222"],"chief":["localhost:2223"],"worker":["localhost:2224","localhost:2225","localhost:2226","localhost:2227"]},"task":{"type":"ps","index":0}}'
+export CHIEF_TF_CONFIG='{"cluster":{"ps":["localhost:2222"],"chief":["localhost:2223"],"worker":["localhost:2224","localhost:2225","localhost:2226","localhost:2227"]},"task":{"type":"chief","index":0}}'
+export WORKER_0_TF_CONFIG='{"cluster":{"ps":["localhost:2222"],"chief":["localhost:2223"],"worker":["localhost:2224","localhost:2225","localhost:2226","localhost:2227"]},"task":{"type":"worker","index":0}}'
+export WORKER_1_TF_CONFIG='{"cluster":{"ps":["localhost:2222"],"chief":["localhost:2223"],"worker":["localhost:2224","localhost:2225","localhost:2226","localhost:2227"]},"task":{"type":"worker","index":1}}'
+export WORKER_2_TF_CONFIG='{"cluster":{"ps":["localhost:2222"],"chief":["localhost:2223"],"worker":["localhost:2224","localhost:2225","localhost:2226","localhost:2227"]},"task":{"type":"worker","index":2}}'
+export WORKER_3_TF_CONFIG='{"cluster":{"ps":["localhost:2222"],"chief":["localhost:2223"],"worker":["localhost:2224","localhost:2225","localhost:2226","localhost:2227"]},"task":{"type":"worker","index":3}}'

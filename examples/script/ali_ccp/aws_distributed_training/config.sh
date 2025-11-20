@@ -7,7 +7,7 @@
 # AWS 配置
 export AWS_REGION="ap-northeast-1"  # 修改为你的 VPC 所在区域
 export VPC_ID="vpc-07c7749fc361250c1"
-export SUBNET_IDS=("subnet-0c41047741293baa5" "subnet-093897d6c8cdc9908" "subnet-029886a11d150ddf2")
+export SUBNET_IDS=("subnet-0c41047741293baa5")  # ap-northeast-1a for placement group
 export SECURITY_GROUP="sg-009992f079f745216"
 export AMI_ID="ami-0244ef75e95122fd9"
 export KEY_NAME="zk-global-admin-tokyo"  # 修改为你的 SSH key 名称
@@ -20,6 +20,9 @@ export WORKER_INSTANCE_TYPE="m6i.xlarge"
 # 训练配置
 export DATASET_SIZE="full"
 export NUM_WORKERS=4
+
+# Placement Group (用于优化网络性能)
+export PLACEMENT_GROUP="cpg"
 
 # 实例标识
 export TAG_PREFIX="easyrec-training"

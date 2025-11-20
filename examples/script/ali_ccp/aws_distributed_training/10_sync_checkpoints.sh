@@ -28,7 +28,17 @@ echo ""
 SSH_KEY="${HOME}/.ssh/${KEY_NAME}.pem"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_KEY"
 
-CKPT_DIR="deepfm_ali_ccp_${DATASET_SIZE}_ps"
+# 使用当前实验名称
+if [ -f "$SCRIPT_DIR/current_experiment.sh" ]; then
+    source "$SCRIPT_DIR/current_experiment.sh"
+    CKPT_DIR=$(basename "$CURRENT_MODEL_DIR")
+else
+    echo -e "${RED}✗ 未找到当前实验信息${NC}"
+    exit 1
+fi
+
+echo -e "${BLUE}实验: $CKPT_DIR${NC}"
+echo ""
 
 echo -e "${YELLOW}[1/3] 检查 PS Server checkpoint 文件...${NC}"
 
@@ -47,10 +57,11 @@ echo ""
 echo -e "${YELLOW}[2/3] 复制 checkpoint 文件到本地...${NC}"
 
 # 创建临时目录
-TMP_DIR="/tmp/ckpt_${DATASET_SIZE}_$$"
+TMP_DIR="/tmp/ckpt_${CURRENT_EXPERIMENT}_$$"
 mkdir -p "$TMP_DIR"
 
-# 从 PS 复制到本地
+# 从 PS 复制到本地 (使用 sudo 处理权限)
+ssh $SSH_OPTS ubuntu@$PS_IP "sudo chmod -R 755 /home/ubuntu/easyrec_data/ckpt/${CKPT_DIR}"
 scp $SSH_OPTS \
   "ubuntu@$PS_IP:/home/ubuntu/easyrec_data/ckpt/${CKPT_DIR}/model.ckpt-*.data-*" \
   "ubuntu@$PS_IP:/home/ubuntu/easyrec_data/ckpt/${CKPT_DIR}/model.ckpt-*.index" \
@@ -63,6 +74,7 @@ echo ""
 echo -e "${YELLOW}[3/3] 上传 checkpoint 文件到 Chief...${NC}"
 
 # 从本地复制到 Chief
+ssh $SSH_OPTS ubuntu@$CHIEF_IP "sudo mkdir -p /home/ubuntu/easyrec_data/ckpt/${CKPT_DIR} && sudo chmod 777 /home/ubuntu/easyrec_data/ckpt/${CKPT_DIR}"
 scp $SSH_OPTS "$TMP_DIR"/* \
   ubuntu@$CHIEF_IP:/home/ubuntu/easyrec_data/ckpt/${CKPT_DIR}/
 

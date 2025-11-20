@@ -26,11 +26,21 @@ echo ""
 SSH_KEY="${HOME}/.ssh/${KEY_NAME}.pem"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_KEY"
 
-# 配置文件路径
-CONFIG_NAME="deepfm_on_ali_ccp_${DATASET_SIZE}_ps.config"
+# 使用当前实验名称
+if [ -f "$SCRIPT_DIR/current_experiment.sh" ]; then
+    source "$SCRIPT_DIR/current_experiment.sh"
+    CONFIG_NAME="${CURRENT_EXPERIMENT}.config"
+    REMOTE_MODEL_DIR="/home/ubuntu/easyrec_data/ckpt/${CURRENT_EXPERIMENT}"
+else
+    echo -e "${RED}✗ 未找到当前实验信息${NC}"
+    exit 1
+fi
+
 REMOTE_CONFIG_PATH="/home/ubuntu/easyrec_data/configs/${CONFIG_NAME}"
-REMOTE_MODEL_DIR="/home/ubuntu/easyrec_data/ckpt/deepfm_ali_ccp_${DATASET_SIZE}_ps"
-EVAL_RESULT_PATH="/home/ubuntu/easyrec_data/eval_result_${DATASET_SIZE}.txt"
+EVAL_RESULT_PATH="/home/ubuntu/easyrec_data/eval_result_${CURRENT_EXPERIMENT}.txt"
+
+echo -e "${BLUE}实验: $CURRENT_EXPERIMENT${NC}"
+echo ""
 
 echo -e "${YELLOW}[1/4] 检查训练是否完成...${NC}"
 
@@ -42,7 +52,7 @@ if [ "$FINISHED" -eq 0 ]; then
     echo -e "${RED}✗ 训练尚未完成，无法评估${NC}"
     echo ""
     echo "请先等待训练完成，可以使用以下命令检查："
-    echo "  bash check_training_status.sh"
+    echo "  bash 04_monitor_training.sh"
     exit 1
 fi
 
@@ -84,8 +94,8 @@ docker run --rm \
   ${DOCKER_IMAGE} \
   python3 -m easy_rec.python.eval \
   --pipeline_config_path=/workspace/configs/${CONFIG_NAME} \
-  --model_dir=/workspace/ckpt/deepfm_ali_ccp_${DATASET_SIZE}_ps \
-  --eval_result_path=/workspace/eval_result_${DATASET_SIZE}.txt
+  --model_dir=/workspace/ckpt/${CURRENT_EXPERIMENT} \
+  --eval_result_path=/workspace/eval_result_${CURRENT_EXPERIMENT}.txt
 
 echo ""
 echo "Evaluation completed!"
@@ -106,7 +116,8 @@ echo -e "${YELLOW}[4/4] 获取评估结果...${NC}"
 echo ""
 
 # 下载评估结果
-LOCAL_EVAL_RESULT="${SCRIPT_DIR}/eval_result_${DATASET_SIZE}.txt"
+mkdir -p "$SCRIPT_DIR/eval_results"
+LOCAL_EVAL_RESULT="$SCRIPT_DIR/eval_results/${CURRENT_EXPERIMENT}.txt"
 scp $SSH_OPTS ubuntu@$CHIEF_IP:${EVAL_RESULT_PATH} ${LOCAL_EVAL_RESULT} 2>/dev/null
 
 echo -e "${BLUE}========================================${NC}"

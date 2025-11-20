@@ -60,6 +60,7 @@ PS_INSTANCE_ID=$(aws ec2 run-instances \
     --subnet-id ${SUBNET_IDS[0]} \
     --security-group-ids $SECURITY_GROUP \
     --key-name $KEY_NAME \
+    --placement "GroupName=$PLACEMENT_GROUP" \
     --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=50,VolumeType=gp3,DeleteOnTermination=true}' \
     --user-data file:///tmp/user_data.sh \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${TAG_PREFIX}-ps-0},{Key=Role,Value=ps},{Key=Index,Value=0}]" \
@@ -73,9 +74,10 @@ CHIEF_INSTANCE_ID=$(aws ec2 run-instances \
     --region $AWS_REGION \
     --image-id $AMI_ID \
     --instance-type $CHIEF_INSTANCE_TYPE \
-    --subnet-id ${SUBNET_IDS[1]} \
+    --subnet-id ${SUBNET_IDS[0]} \
     --security-group-ids $SECURITY_GROUP \
     --key-name $KEY_NAME \
+    --placement "GroupName=$PLACEMENT_GROUP" \
     --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=50,VolumeType=gp3,DeleteOnTermination=true}' \
     --user-data file:///tmp/user_data.sh \
     --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${TAG_PREFIX}-chief},{Key=Role,Value=chief},{Key=Index,Value=0}]" \
@@ -89,7 +91,7 @@ WORKER_INSTANCE_IDS=()
 for i in $(seq 0 $((NUM_WORKERS-1))); do
     echo -e "${YELLOW}[$(($i+3))/6] 启动 Worker-$i (m6i.xlarge)...${NC}"
 
-    SUBNET_INDEX=$((i % ${#SUBNET_IDS[@]}))
+    SUBNET_INDEX=0
 
     WORKER_ID=$(aws ec2 run-instances \
         --region $AWS_REGION \
@@ -97,8 +99,10 @@ for i in $(seq 0 $((NUM_WORKERS-1))); do
         --instance-type $WORKER_INSTANCE_TYPE \
         --subnet-id ${SUBNET_IDS[$SUBNET_INDEX]} \
         --security-group-ids $SECURITY_GROUP \
-        --key-name $KEY_
-        --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=50,VolumeType=gp3,DeleteOn
+        --key-name $KEY_NAME \
+    --placement "GroupName=$PLACEMENT_GROUP" \
+        --block-device-mappings 'DeviceName=/dev/sda1,Ebs={VolumeSize=50,VolumeType=gp3,DeleteOnTermination=true}' \
+        --user-data file:///tmp/user_data.sh \
         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${TAG_PREFIX}-worker-$i},{Key=Role,Value=worker},{Key=Index,Value=$i}]" \
         --query 'Instances[0].InstanceId' \
         --output text)

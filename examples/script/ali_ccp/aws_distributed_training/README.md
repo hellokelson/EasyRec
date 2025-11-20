@@ -350,19 +350,16 @@ done
 # 1. 启动训练
 bash 03_start_training.sh
 
-# 2. 监控进度（可选）
+# 2. 监控进度（等待训练完成）
 bash 04_monitor_training.sh
 
-# 3. 等待训练完成
-bash check_training_status.sh
-
-# 4. 同步 checkpoint 文件（重要！）
+# 3. 同步 checkpoint 文件（重要！）
 bash 10_sync_checkpoints.sh
 
-# 5. 评估模型
+# 4. 评估模型
 bash 08_evaluate_model.sh
 
-# 6. 查看结果
+# 5. 查看结果
 cat eval_result_full.txt
 ```
 

@@ -26,7 +26,7 @@ bash 09_wait_and_evaluate.sh
 
 ```bash
 # 1. 检查训练是否完成
-bash check_training_status.sh
+bash 04_monitor_training.sh
 
 # 2. 同步 checkpoint 文件（重要！）
 bash 10_sync_checkpoints.sh
@@ -77,7 +77,7 @@ bash 04_monitor_training.sh
 nohup bash 09_wait_and_evaluate.sh > eval.log 2>&1 &
 
 # 或方式B：训练完成后手动评估
-bash check_training_status.sh
+bash 04_monitor_training.sh
 bash 08_evaluate_model.sh
 ```
 
@@ -108,7 +108,7 @@ accuracy: 0.8234
 **解决**:
 ```bash
 # 检查训练进度
-bash check_training_status.sh
+bash 04_monitor_training.sh
 
 # 等待训练完成或使用自动等待脚本
 bash 09_wait_and_evaluate.sh

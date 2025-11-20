@@ -26,6 +26,13 @@ echo ""
 SSH_KEY="${HOME}/.ssh/${KEY_NAME}.pem"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $SSH_KEY"
 
+# 显示当前实验
+if [ -f "$SCRIPT_DIR/current_experiment.sh" ]; then
+    source "$SCRIPT_DIR/current_experiment.sh"
+    echo -e "${BLUE}当前实验: $CURRENT_EXPERIMENT${NC}"
+    echo ""
+fi
+
 echo -e "${YELLOW}[1/3] 停止 Workers...${NC}"
 for i in "${!WORKER_IPS[@]}"; do
     ip="${WORKER_IPS[$i]}"

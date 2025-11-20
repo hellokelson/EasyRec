@@ -28,6 +28,43 @@ echo -e "${BLUE}分布式训练监控${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
+# 显示当前实验
+if [ -f "$SCRIPT_DIR/current_experiment.sh" ]; then
+    source "$SCRIPT_DIR/current_experiment.sh"
+    echo -e "${BLUE}当前实验: $CURRENT_EXPERIMENT${NC}"
+else
+    echo -e "${YELLOW}未找到当前实验信息${NC}"
+fi
+
+# 检查训练是否完成
+FINISHED=$(ssh $SSH_OPTS ubuntu@$CHIEF_IP \
+  "docker logs easyrec_chief 2>&1 | grep -c 'Train and evaluate finish' || echo 0" 2>/dev/null)
+
+# 确保 FINISHED 是数字
+FINISHED=${FINISHED:-0}
+
+if [ "$FINISHED" -gt 0 ] 2>/dev/null; then
+    echo -e "${GREEN}训练状态: ✅ FINISHED${NC}"
+    
+    # 检查 DONE marker
+    if [ -f "$SCRIPT_DIR/current_experiment.sh" ]; then
+        DONE_FILE=$(ssh $SSH_OPTS ubuntu@$CHIEF_IP \
+          "ls /home/ubuntu/easyrec_data/ckpt/${CURRENT_EXPERIMENT}/ESTIMATOR_TRAIN_DONE 2>/dev/null" || echo "")
+        if [ -n "$DONE_FILE" ]; then
+            echo -e "${GREEN}DONE Marker: ✅ 存在${NC}"
+        fi
+    fi
+    
+    echo ""
+    echo -e "${YELLOW}下一步操作:${NC}"
+    echo "  1. bash 10_sync_checkpoints.sh  # 同步 checkpoint"
+    echo "  2. bash 08_evaluate_model.sh    # 评估模型"
+else
+    echo -e "${YELLOW}训练状态: ⏳ RUNNING${NC}"
+fi
+
+echo ""
+
 # 检查容器状态
 echo -e "${YELLOW}[容器状态]${NC}"
 echo ""
@@ -50,7 +87,23 @@ done
 # 获取训练进度
 echo -e "${YELLOW}[训练进度 - Chief]${NC}"
 echo ""
-ssh $SSH_OPTS ubuntu@$CHIEF_IP "docker logs easyrec_chief 2>&1 | grep -E '(global step|loss|auc)' | tail -20"
+
+RECENT_LOGS=$(ssh $SSH_OPTS ubuntu@$CHIEF_IP "docker logs easyrec_chief 2>&1 | grep -E '(global step|loss|auc)' | tail -20" 2>/dev/null)
+
+if [ -n "$RECENT_LOGS" ]; then
+    echo "$RECENT_LOGS"
+    
+    # 提取最新步数和进度
+    LATEST_STEP=$(echo "$RECENT_LOGS" | grep -oP 'global step \K[0-9]+' | tail -1)
+    if [ -n "$LATEST_STEP" ] && [ "$NUM_STEPS" -gt 0 ]; then
+        PROGRESS=$((LATEST_STEP * 100 / NUM_STEPS))
+        echo ""
+        echo -e "${BLUE}进度: ${LATEST_STEP}/${NUM_STEPS} (${PROGRESS}%)${NC}"
+    fi
+else
+    echo "暂无训练日志"
+fi
+
 echo ""
 
 # 资源使用

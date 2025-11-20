@@ -35,7 +35,7 @@ tail -f eval.log
 
 ```bash
 # 1. 检查训练是否完成
-bash check_training_status.sh
+bash 04_monitor_training.sh
 
 # 2. 同步 checkpoint 文件（重要！）
 bash 10_sync_checkpoints.sh
@@ -125,7 +125,7 @@ bash 05_setup_local_tensorboard.sh
 # 访问 http://localhost:6006
 
 # 4. 等待训练完成
-bash check_training_status.sh
+bash 04_monitor_training.sh
 
 # 5. 同步 checkpoint 文件
 bash 10_sync_checkpoints.sh

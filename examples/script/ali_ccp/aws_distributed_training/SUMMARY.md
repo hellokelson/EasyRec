@@ -22,7 +22,7 @@
 
 | 脚本 | 描述 |
 |------|------|
-| **check_training_status.sh** | 检查训练状态 |
+| **04_monitor_training.sh** | 检查训练状态 |
 | **start_tensorboard_tunnel.sh** | 启动 SSH 隧道访问 TensorBoard |
 | **sync_models.sh** | 下载训练好的模型到本地 |
 
@@ -160,7 +160,7 @@ bash 04_monitor_training.sh
 bash 05_setup_local_tensorboard.sh
 
 # 4. 等待训练完成
-bash check_training_status.sh
+bash 04_monitor_training.sh
 
 # 5. 同步 checkpoint（重要！）
 bash 10_sync_checkpoints.sh

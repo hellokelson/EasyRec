@@ -1,0 +1,15 @@
+# 集群信息（自动生成）
+cluster_info.sh
+tf_configs.sh
+current_experiment.sh
+
+# 评估结果
+eval_results/
+eval_result_*.txt
+
+# SSH 配置
+ssh_config
+
+# 日志文件
+*.log
+nohup.out
